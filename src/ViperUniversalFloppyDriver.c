@@ -1,4 +1,4 @@
-// Viper Universal Windows 10 Floppy Driver v1.0.1
+// Viper Universal Windows 10 Floppy Driver v1.0.2
 // Copyright (c) 2026 Darren "Viper" Crawford.
 // One-click helper for USB floppy drives on Windows 10 x64.
 // Uses signed Microsoft inbox USB floppy drivers from %WINDIR%\INF\usbstor.inf.

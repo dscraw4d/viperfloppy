@@ -10,16 +10,33 @@ permissions:
 
 jobs:
   build:
-    # Pin to the VS 2022 image for a stable MSVC/Windows SDK toolchain.
-    runs-on: windows-2022
+    # Explicitly use GitHub's Visual Studio 2026 image.
+    # The generated program still targets Windows 10 x64 APIs.
+    runs-on: windows-2025-vs2026
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Build x64 executable with MSVC
+      - name: Initialize Visual Studio 2026 x64 tools and build
         shell: cmd
-        run: build-local.cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          if errorlevel 1 exit /b 1
+          echo === Compiler ===
+          where cl.exe
+          echo === Linker ===
+          where link.exe
+          call build-local.cmd
+
+      - name: Verify executable exists
+        shell: pwsh
+        run: |
+          $exe = "bin\Viper-Universal-Windows-10-Floppy-Driver.exe"
+          if (-not (Test-Path $exe)) {
+            throw "Build did not create $exe"
+          }
+          Get-Item $exe | Format-List Name,Length,LastWriteTime
 
       - name: Generate SHA-256
         shell: pwsh
@@ -31,7 +48,8 @@ jobs:
       - name: Upload build
         uses: actions/upload-artifact@v7
         with:
-          name: Viper-Universal-Windows-10-Floppy-Driver
+          name: Viper-Universal-Windows-10-Floppy-Driver-v1.0.2
           path: |
             bin/Viper-Universal-Windows-10-Floppy-Driver.exe
             SHA256SUMS.txt
+          if-no-files-found: error
