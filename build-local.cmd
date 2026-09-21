@@ -1,27 +1,51 @@
 @echo off
-setlocal
+setlocal EnableExtensions
 cd /d "%~dp0"
 
-where clang-cl >nul 2>nul || (
-  echo ERROR: clang-cl was not found. Run this from an x64 Visual Studio Developer Command Prompt with LLVM installed.
-  exit /b 1
-)
-where lld-link >nul 2>nul || (
-  echo ERROR: lld-link was not found. Install the LLVM tools for Visual Studio.
-  exit /b 1
+echo ============================================================
+echo   Viper Universal Windows 10 Floppy Driver - MSVC Build
+echo ============================================================
+echo.
+
+where cl.exe >nul 2>nul
+if errorlevel 1 (
+    set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+    if not exist "%VSWHERE%" (
+        echo ERROR: Visual Studio Build Tools were not found.
+        echo Install Visual Studio 2022 Build Tools with the C++ build tools workload.
+        exit /b 1
+    )
+
+    for /f "usebackq tokens=*" %%I in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSINSTALL=%%I"
+
+    if not defined VSINSTALL (
+        echo ERROR: The MSVC x64 C++ toolchain was not found.
+        exit /b 1
+    )
+
+    call "%VSINSTALL%\VC\Auxiliary\Build\vcvars64.bat"
+    if errorlevel 1 exit /b %errorlevel%
 )
 
 if not exist build mkdir build
 if not exist bin mkdir bin
 
-clang-cl --target=x86_64-pc-windows-msvc /c src\ViperUniversalFloppyDriver.c /Fobuild\ViperUniversalFloppyDriver.obj /O1 /GS- /GR- /Zl /clang:-ffreestanding /clang:-fno-builtin /clang:-mno-stack-arg-probe
-if errorlevel 1 exit /b %errorlevel%
+echo Building x64 EXE with Microsoft C/C++...
+cl.exe /nologo /W4 /O2 /MT /DUNICODE /D_UNICODE /TC ^
+  /Fo:"build\ViperUniversalFloppyDriver.obj" ^
+  /Fe:"bin\Viper-Universal-Windows-10-Floppy-Driver.exe" ^
+  "src\ViperUniversalFloppyDriver.c" ^
+  /link /SUBSYSTEM:WINDOWS /MACHINE:X64 setupapi.lib shell32.lib user32.lib kernel32.lib
 
-lld-link /out:bin\Viper-Universal-Windows-10-Floppy-Driver.exe /entry:wWinMainCRTStartup /subsystem:windows /nodefaultlib /machine:x64 build\ViperUniversalFloppyDriver.obj kernel32.lib setupapi.lib shell32.lib user32.lib msvcrt.lib
-if errorlevel 1 exit /b %errorlevel%
-
-certutil -hashfile bin\Viper-Universal-Windows-10-Floppy-Driver.exe SHA256
+if errorlevel 1 (
+    echo.
+    echo BUILD FAILED.
+    exit /b %errorlevel%
+)
 
 echo.
-echo Build complete: bin\Viper-Universal-Windows-10-Floppy-Driver.exe
-endlocal
+echo Build complete:
+echo   bin\Viper-Universal-Windows-10-Floppy-Driver.exe
+echo.
+certutil -hashfile "bin\Viper-Universal-Windows-10-Floppy-Driver.exe" SHA256
+exit /b 0

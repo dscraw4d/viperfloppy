@@ -10,23 +10,16 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    # Pin to the VS 2022 image for a stable MSVC/Windows SDK toolchain.
+    runs-on: windows-2022
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Build x64 executable
-        shell: pwsh
-        run: |
-          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-          if (-not $vs) { throw "Visual Studio C++ toolchain not found." }
-          $vcvars = Join-Path $vs "VC\Auxiliary\Build\vcvars64.bat"
-          New-Item -ItemType Directory -Force -Path build, bin | Out-Null
-          $cmd = '"' + $vcvars + '" && clang-cl --target=x86_64-pc-windows-msvc /c src\ViperUniversalFloppyDriver.c /Fobuild\ViperUniversalFloppyDriver.obj /O1 /GS- /GR- /Zl /clang:-ffreestanding /clang:-fno-builtin /clang:-mno-stack-arg-probe && lld-link /out:bin\Viper-Universal-Windows-10-Floppy-Driver.exe /entry:wWinMainCRTStartup /subsystem:windows /nodefaultlib /machine:x64 build\ViperUniversalFloppyDriver.obj kernel32.lib setupapi.lib shell32.lib user32.lib msvcrt.lib'
-          cmd.exe /d /s /c $cmd
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build x64 executable with MSVC
+        shell: cmd
+        run: build-local.cmd
 
       - name: Generate SHA-256
         shell: pwsh
